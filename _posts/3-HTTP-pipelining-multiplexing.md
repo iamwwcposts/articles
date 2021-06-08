@@ -1,9 +1,9 @@
 ---
-title: HTTP-pipelining-multiplexing
 date: 2019-09-11
 updated: 2020-10-06
 issueid: 3
 tags:
+title: HTTP-pipelining-multiplexing
 ---
 ![](https://webcdn.chaochaogege.net/images/20190321152954.png)
 
