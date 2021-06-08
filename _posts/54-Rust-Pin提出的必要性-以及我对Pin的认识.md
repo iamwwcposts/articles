@@ -1,10 +1,10 @@
 ---
+title: Rust-Pin提出的必要性-以及我对Pin的认识
+date: 2021-06-08
 updated: 2021-06-08
 issueid: 54
 tags:
 - Rust
-title: Rust-Pin提出的必要性-以及我对Pin的认识
-date: 2021-06-08
 ---
 ## 我对Pin 的整体理解 - 为了解决unsafe场景下move问题
 

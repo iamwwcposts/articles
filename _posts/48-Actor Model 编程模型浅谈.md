@@ -1,10 +1,10 @@
 ---
-issueid: 48
-tags:
-- 转载
 title: Actor Model 编程模型浅谈
 date: 2020-09-15
 updated: 2020-09-15
+issueid: 48
+tags:
+- 转载
 ---
 > 本文转载自 http://jiangew.me/actor-model/
 
