@@ -1,10 +1,10 @@
 ---
-date: 2020-04-23
 updated: 2020-04-23
 issueid: 41
 tags:
 - 杂七杂八
 title: microsoft pinyin horizontal or vertical switcher bug fix
+date: 2020-04-23
 ---
 如果你使用`Windows 2004H`版本的`pinyin` 输入法，那么有一定概率 `horizontal/vertical` 失效
 

@@ -1,9 +1,9 @@
 ---
+issueid: 2
+tags:
 title: 解决PivotRoot系统调用失败
 date: 2019-09-11
 updated: 2019-09-11
-issueid: 2
-tags:
 ---
 ### pivot_root 介绍
 

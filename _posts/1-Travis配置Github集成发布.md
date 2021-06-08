@@ -1,9 +1,9 @@
 ---
-title: Travis配置Github集成发布
-date: 2019-09-11
 updated: 2019-09-11
 issueid: 1
 tags:
+title: Travis配置Github集成发布
+date: 2019-09-11
 ---
 #### 写在前面
 

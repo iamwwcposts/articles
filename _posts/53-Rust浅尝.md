@@ -1,11 +1,11 @@
 ---
-updated: 2020-11-15
+title: Rust浅尝
+date: 2020-11-01
+updated: 2021-06-08
 issueid: 53
 tags:
 - 基础
 - 编程语言
-title: Rust学习
-date: 2020-11-01
 ---
 # Rust 基本语法学习
 
