@@ -1,10 +1,10 @@
 ---
-tags:
-- 基础
 title: ABI（Application Binary Interface）是什么？
 date: 2020-02-28
 updated: 2020-02-28
 issueid: 32
+tags:
+- 基础
 ---
 ABI是一组决定调用转换（calling convention），放置结构的规则。
 

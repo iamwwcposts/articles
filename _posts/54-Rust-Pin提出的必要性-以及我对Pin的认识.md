@@ -1,10 +1,10 @@
 ---
-title: Rust-Pin提出的必要性-以及我对Pin的认识
-date: 2021-06-08
-updated: 2021-06-08
 issueid: 54
 tags:
 - Rust
+title: Rust-Pin提出的必要性-以及我对Pin的认识
+date: 2021-06-08
+updated: 2021-06-18
 ---
 ## 我对Pin 的整体理解 - 为了解决unsafe场景下move问题
 
@@ -99,7 +99,7 @@ https://discord.com/channels/500028886025895936/500336333500448798/8474895384146
 
 对于一个结构体，当每个成员都是 `Unpin` 时，整个 `struct` 就是 `Unpin`
 
-rust中默认类型都是Unpin的，也即，可以move
+rust中默认类型都是Unpin的，也即，即使被Pin住，可以move
 
 当需要开发自引用结构时，可以将 struct 某个自引用字段用Pin包裹，这样struct就是 !Unpin，想要Pin住这种结构常规用 `Pin::new(x)`不行了。必须 Box::pin(x);
 
@@ -110,9 +110,18 @@ https://github.com/tokio-rs/tokio/blob/6b9bdd5ca25bd3f30589506de911db73f7dbf8b4/
 
 TimerEntry -> TimerShared -> TimerSharedPadded#pointers -> LinkedList -> TimerShared
 
-由于TimerShared结构间接自引用，所以整个链条都需要通过PhantomPined 来 !Unpin
+由于TimerShared结构间接自引用，所以整个链条都需要通过 PhantomPined 来 !Unpin
 
 ---------------------
+
+## Unpin
+
+Unpin是指即使 struct 被Pin住，struct也可以被移动
+
+这两行 tokio::pin! 如果注释掉会出问题
+
+究其原因，是由于 select 要求 Unpin，而后 
+https://github.com/willdeeper/shadowsocks-rust/blob/6ff4f5b04b8e22d36cd54477cfcadf8cb403de21/bin/ssserver.rs#L308
 
 ## 如果不Pin住实现Future的struct会有可能发生Panic
 
