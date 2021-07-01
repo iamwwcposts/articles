@@ -1,9 +1,9 @@
 ---
+title: TypeScript中import=require 和es6 module import区别
 date: 2019-09-11
 updated: 2019-11-20
 issueid: 8
 tags:
-title: TypeScript中import=require 和es6 module import区别
 ---
 这个是在Github 看到的评论，感觉写的不错，就直接搬过来了
 

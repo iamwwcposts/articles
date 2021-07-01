@@ -1,10 +1,10 @@
 ---
-title: Redux为什么需要中间件来处理异步数据流？
 date: 2020-10-11
 updated: 2020-10-11
 issueid: 50
 tags:
 - 前端
+title: Redux为什么需要中间件来处理异步数据流？
 ---
 我们明明可以在async之后直接调用dispatch，为什么又要多此一举引入中间件呢？
 

@@ -1,10 +1,10 @@
 ---
+tags:
+- 前端
 title: React Hook使用小记录
 date: 2020-10-11
 updated: 2020-10-11
 issueid: 49
-tags:
-- 前端
 ---
 # UseMemo 的使用
 
