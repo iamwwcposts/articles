@@ -1,9 +1,9 @@
 ---
-tags:
-title: Nginx配置Oneindex
 date: 2020-03-12
 updated: 2020-03-12
 issueid: 35
+tags:
+title: Nginx配置Oneindex
 ---
 每一个 `server` 都是一个虚拟主机，通过 `http` 的 `host` 字段区分不同的目录
 

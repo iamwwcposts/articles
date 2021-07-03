@@ -1,12 +1,12 @@
 ---
-updated: 2021-07-01
+updated: 2021-07-03
 issueid: 56
 tags:
 - Rust
-title: Rust声明周期
+title: Rust生命周期
 date: 2021-07-01
 ---
-# 声明周期的抽象
+# 生命周期的抽象
 
 **将LT想象成scope不太容易理解，可以将其想象成链。标注同一个的引用必须共存亡。通过 'a, 多个引用链在一起。**
 ![将引用比作绳子]](https://user-images.githubusercontent.com/24750337/114650520-fb8a8c80-9d14-11eb-93a0-3ee191ff4938.png)
@@ -14,9 +14,9 @@ date: 2021-07-01
 https://doc.rust-lang.org/stable/book/ch10-03-lifetime-syntax.html
 https://www.zhihu.com/question/30861652/answer/132841992
 
-# 为什么声明周期被如此设计
+# 为什么生命周期被如此设计
 
-跨函数的变量生存期分析及其复杂，要分析完成各种条件语句，且需要的值只有在运行时才能确认，这就加大了编译器分析的复杂度（又可认为不可能进行分析），Rust通过在函数，结构体上进行声明周期标注，将分析的范围限定到函数内部，从而完成整个分析的过程。这就是为何生命之后需要在 函数， 结构体 上进行 `'a` 标注
+跨函数的变量生存期分析及其复杂，要分析完成各种条件语句，且需要的值只有在运行时才能确认，这就加大了编译器分析的复杂度（又可认为不可能进行分析），Rust通过在函数，结构体上进行生命周期标注，将分析的范围限定到函数内部，从而完成整个分析的过程。这就是为何生命之后需要在 函数， 结构体 上进行 `'a` 标注
 
 [官方文档上有过类似的解释](https://doc.rust-lang.org/stable/book/ch10-03-lifetime-syntax.html)
 > lifetime syntax is about connecting the lifetimes of various parameters and return values of functions. Once they’re connected, Rust has enough information to allow memory-safe operations and disallow operations that would create dangling pointers or otherwise violate memory safety.
@@ -66,7 +66,7 @@ fn main() {
 ```
 'b 和整个 struct 的 'a 无关，所以some_method的可变借用不需要和整个struct对齐，第二次调用可重新借用。
 
-通过上面例子说明，代码能编译通过只是确保内存安全，声明周期的标注不一定是对的。
+通过上面例子说明，代码能编译通过只是确保内存安全，生命周期的标注不一定是对的。
 
 以上来自
 
@@ -114,14 +114,14 @@ impl fmt::Debug for Spawner {
 }
 ```
 
-## 'static 声明周期
-当 struct 引用其他内存时需要声明周期标识
+## 'static 生命周期
+当 struct 引用其他内存时需要生命周期标识
 
-'static 告诉编译器，这个 name 声明周期比 Person 结构体 无限长。
+'static 告诉编译器，这个 name 生命周期比 Person 结构体 无限长。
 
 https://www.reddit.com/r/rust/comments/o9w6rl/rust_traits_and_static/h3dszio?utm_source=share&utm_medium=web2x&context=3
 
-声明周期只是个标注，编译器根据标注进行声明周期推导，如果发现对不上还是会报错。
+生命周期只是个标注，编译器根据标注进行生命周期推导，如果发现对不上还是会报错。
 
 ```rs
 struct Person {
@@ -199,6 +199,6 @@ fn longest<'a> (x: &'a str, y: &str) -> &'a str {
 
 > When returning a reference from a function, the lifetime parameter for the return type needs to match the lifetime parameter for one of the parameters. If the reference returned does not refer to one of the parameters, it must refer to a value created within this function, which would be a dangling reference because the value will go out of scope at the end of the function. Consider this attempted implementation of the longest function that won’t compile:
 
-编写函数，结构体时，最简单的生命周期标注是给全部的引用都加上相同声明周期，这样最起码可以确保万无一失
+编写函数，结构体时，最简单的生命周期标注是给全部的引用都加上相同生命周期，这样最起码可以确保万无一失
 
 如果函数某个引用&c并不和其他引用有'a的关系，可以给&c添加 'b，不过这种情况很少出现

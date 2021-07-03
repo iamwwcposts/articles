@@ -1,10 +1,10 @@
 ---
-title: Go与GC
-date: 2019-09-16
 updated: 2019-09-21
 issueid: 16
 tags:
 - Go
+title: Go与GC
+date: 2019-09-16
 ---
 ### 常见的 GC 算法
 
