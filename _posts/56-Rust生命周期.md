@@ -1,10 +1,10 @@
 ---
+title: Rust生命周期
+date: 2021-07-01
 updated: 2021-07-03
 issueid: 56
 tags:
 - Rust
-title: Rust生命周期
-date: 2021-07-01
 ---
 # 生命周期的抽象
 

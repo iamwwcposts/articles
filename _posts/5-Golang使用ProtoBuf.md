@@ -1,9 +1,9 @@
 ---
-title: Golang使用ProtoBuf
-date: 2019-09-11
 updated: 2019-09-11
 issueid: 5
 tags:
+title: Golang使用ProtoBuf
+date: 2019-09-11
 ---
 两个例子都使用了`Golang`最新的`module feature`
 第一个例子还是放到了`$GOPATH`下

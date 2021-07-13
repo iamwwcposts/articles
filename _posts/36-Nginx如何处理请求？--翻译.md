@@ -1,10 +1,10 @@
 ---
+date: 2020-03-13
+updated: 2020-03-18
 issueid: 36
 tags:
 - 翻译
 title: Nginx如何处理请求？--翻译
-date: 2020-03-13
-updated: 2020-03-18
 ---
 > 本文翻译自：
 >

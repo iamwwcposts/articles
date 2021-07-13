@@ -1,9 +1,9 @@
 ---
-title: Git常用命令
-date: 2019-09-16
 updated: 2019-09-16
 issueid: 17
 tags:
+title: Git常用命令
+date: 2019-09-16
 ---
 这里收集着我平时用到的Git操作 :)
 

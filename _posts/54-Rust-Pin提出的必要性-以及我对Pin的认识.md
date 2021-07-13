@@ -1,10 +1,10 @@
 ---
-updated: 2021-06-18
-issueid: 54
 tags:
 - Rust
 title: Rust-Pin提出的必要性-以及我对Pin的认识
 date: 2021-06-08
+updated: 2021-07-12
+issueid: 54
 ---
 ## 我对Pin 的整体理解 - 为了解决unsafe场景下move问题
 
@@ -116,12 +116,49 @@ TimerEntry -> TimerShared -> TimerSharedPadded#pointers -> LinkedList -> TimerSh
 
 ## Unpin
 
-Unpin是指即使 struct 被Pin住，struct也可以被移动
+Unpin是指 **即使 struct 被Pin住，struct 也可以被移动**，并不是指不能被移动！
+
+Types that can be safely moved **after** being pinned.
+
+https://doc.rust-lang.org/std/marker/trait.Unpin.html
+
+x.await要防止上一行存的引用在下一行被move，所以poll future时临时Pin住
+
+Future是编译器翻译成的状态机，编译器会将await点用到的变量保存到struct，默认赋值这些变量时通过 `*Self = xxx`，由于Self永远是自身，所以move是安全的（是通过Self相对引用）。
+
+但如果我们future的代码里获取了绝对地址，并且用在await，编译器会将这地址保存到struct，这时调用poll()被move就会出问题。为了兼容这情况，poll的Self就必须被Pin住。
+
+
+```rs
+async fn pin_example() -> i32 {
+    let array = [1, 2, 3];
+    // async第一次执行后
+    // 获取array里面的绝对地址
+    // 这些代码就将 Future 变成了自引用结构
+    // Future通过poll时禁止move来避免move后引用绝对地址导致的 UB
+    let element = &array[2];
+    async_write_file("foo.txt", element.to_string()).await;
+    *element
+}
+```
+
+也为了兼容这情况，Future结构是 !Unpin
+
+https://os.phil-opp.com/async-await/#pinning
+
+Future在第一次poll之前 move 是没问题的，因为async函数里的代码被封装进 Future#poll 里，只要还从未调用过这函数，poll里可能存在的生成自引用的代码就不会被执行，那这时移动就没问题
+
+**It is worth noting that moving futures before the first poll call is fine**. This is a result of the fact that **futures are lazy and do nothing until they're polled for the first time**. The start state of the generated state machines therefore only contains the function arguments, but no internal references
+
+--------------------
 
 这两行 tokio::pin! 如果注释掉会出问题
-
-究其原因，是由于 select 要求 Unpin，而后 
 https://github.com/willdeeper/shadowsocks-rust/blob/6ff4f5b04b8e22d36cd54477cfcadf8cb403de21/bin/ssserver.rs#L308
+
+究其原因，是由于 select 要求 Unpin，而 server 是 Future，对Future本身是 !Unpin（注意，!Unpin是编译器不会为其实现Unpin），由于server和abort_signal会被状态机放到 struct 保存状态，所以 tokio::pin 只是简单检查了是 ownership，就Pin::new_unchecked获取Pin
+
+
+关于状态机和 !Unpin，可以看我写的 `async是如何使用状态机实现的`（本地文档库 计算机理论/），搜索!Unpin，会有详细介绍。
 
 ## 如果不Pin住实现Future的struct会有可能发生Panic
 
@@ -280,11 +317,11 @@ https://github.com/shadowsocks/shadowsocks-rust/blob/49b7004d7565de98a24b4965744
 
 所以就好奇，为什么可以直接用 `new_unchecked` 函数。
 
-tokio::pin!用的new_unchecked 并不在乎到底Pin的是在stack还是heap，如果指针指向stack，就是pin在stack，指向heap，就是pin在heap。
+tokio::pin!用的 new_unchecked 并不在乎到底Pin的是在stack还是heap，如果指针指向stack，就是pin在stack，指向heap，就是pin在heap。
 
-tokio::pin有意思的点是，`let mut $x = $x` 先 move 一下，确保 x moveable ，也即拥有ownership
+tokio::pin!有意思的点是，`let mut $x = $x` 先shadow掉原来的 $x，确保 $x 不会被别的变量持有。
 
-然后Pin住。Pin 根本就不在乎是stack 还是 heap，Pin只是代表不能被 move，
+最后Pin住。Pin 根本就不在乎是 stack 还是 heap，Pin只是代表不能被 move，
 
 > pinning makes sense anywhere
 > pinning just means it doesn't move
@@ -321,3 +358,160 @@ macro_rules! pin {
     };
 }
 ```
+
+## Pin projection 和 structural Pinning
+
+大体意思是，对于一个结构体Struct，当Struct被Pin住时，这个Pin的约束对哪个字段起作用？
+如果某个字段被move并不会引起问题，那 `Pin<&mut Map>` 可以转换为 `&mut f`
+如果某个字段 future 必须被Pinned，那 `Pin<&mut Map>`就是约束他(future)的，而非其他字段。
+
+其他字段是否被move，并不会引起unsound。
+
+```rs
+struct Map<Fut, F> {
+    future: Fut,
+    f: Option<F>
+}
+
+// 默认每个字段都必须是Unpin，Map才会是Unpin
+// 我们主动为Map实现Unpin
+// 当 Fut 是Unpin时，整个结构就是Unpin
+// 为什么不在乎f Unpin与否？
+// 因为f是否Unpin，和是否被move，并不会导致future#poll出问题，可以忽略f
+// 
+impl <Fut: Unpin, F> Unpin for Map<Fut, F> {};
+
+impl<Fut, F, T> Future for Map<Fut, F>
+where   Fut: Future,
+        F: FnOnce(Fut::Output) -> T
+{
+    unsafe_pinned!(future: Fut);
+    unsafe_unpinned!(f: Option<F>);
+
+    type Output = T;
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<T> {
+        match self.as_mut().future().poll(cx) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(output) => {
+                let f = self.f().take().expect("take must success");
+                Poll::Ready(f(output))
+            } 
+        }
+    }
+}
+```
+
+pin_project crate 就是做这个的，通过在字段上标注 `#[pin]`进行局部Pin，struct是Pin的，有 `#[pin]`的字段也是Pin的，其他字段是否被move没有问题
+
+
+当字段被Pin住，成为 `Pin<&mut Field>`，就不应该将 Field 移出去。这里要说明的是，移出去不一定错，Pin从设计上说不能move而已。只要将他假设为，虽然被Pin住，但还是可以被move。
+
+
+## 翻译 https://doc.rust-lang.org/nightly/core/pin/index.html#projections-and-structural-pinning
+
+### Projections and Structural Pinning 映射和结构化Pinning
+
+名词解释
+
+1. projection：映射，投影。提供一个方法将 `Pin<&mut Struct>` 转换成 `Pin<&mut Field>`
+2. structural pinning: 结构pinning。如果整个struct是Pin，那每个成员也都是Pin。比如现存在 `Pin<&mut Struct>`类型，则此刻 Struct 里的每个字段都必须是 `Pin<&mut FieldABCDEFG>`
+
+
+当使用pinned结构时，我们如果获取方法参数中类型是 `Pin<&mut Struct>`的内部结构成员？通常办法是写一个工具函数（叫做 projection），将 `Pin<&mut Struct>`转换成对内部字段的引用。但这引用应该是 `Pin<&mut Field>` 还是 `&mut Field`？实际上当获取Enum，或容器类型(`Vec<T>`, `Box<T>`, `RefCell<T>`)内部字段的引用时，也会有上面的疑问。（这疑问涉及到可变和共享引用两者，我们只是单拎出来可变引用加以说明）。
+
+实际上是否将某个字段的pinned projection转换为 `Pin<&mut Struct>`转换成 `Pin<&mut Field>` 还是 `&mut Field` 取决于 Struct 结构体的提供者。这种转化是有约束的，最重要的约束时一致性。Struct的每个字段两个取其一，只能被映射成为 pinned reference 或者 &mut Field。如果同时映射为上述两者，那可能是 unsound.
+
+作为数据结构的作者，你必须决定每个字段是否能从 `Pin<&mut Struct>`转换为 `Pin<&mut Field>`。pinning的传递（即从 `Pin<&mut Struct>`转换为 `Pin<&mut Field>`）称为结构化(structural)。因为他衍随了原来外层的类型（我自己的理解，`Pin<&mut Struct>`=> `Pin<&mut Field>`，只是内层T变化，作为最外层的 `Pin<T>`不变，也即，始终是Pin的）。在下面的章节，我们分别解释两种选择的考量
+
+> 哪两者？分别是
+> 1. `Pin<&mut Struct>` => `&mut Field`，称为 not structural(Pinning is not structural for `field`)
+> 2. `Pin<&mut Struct>` => `Pin<&mut Field>`，称为 structural(Pinning is structural for `field`)
+
+#### Pinning is not structural for `field`
+
+一个被Pin住的Struct `Pin<&mut Struct>`，其内部字段竟然不是Pinned，看着很反直觉，但通常这是最简单的选择，如果`Pin<&mut Field>`从未被创建，那绝对不可能出错！所以，如果你认为某些字段没必要有 `结构化pinning约束（structural pinning）`，你需要确保的是，你自始至终都不会创建对这些字段的 pinned reference，也即，不会创建 `Pin<&mut Field>`。
+
+没有结构化pinning的字段可以通过映射方法，将 `Pin<&mut Struct>`转换为 `&mut Field`。
+
+```rs
+impl Struct {
+    fn pin_get_field(self: Pin<&mut Self>) -> &mut Field {
+        // This is okay because `field` is never considered pinned.
+        unsafe { &mut self.get_unchecked_mut().field }
+    }
+}
+```
+
+你设置可以 `impl Unpin for Struct` 即使字段 field 不是 Unpin. 
+
+> What that type thinks about pinning is not relevant when no Pin<&mut Field> is ever created.
+> 这句话我不会翻译，但我这么理解：一定要区分开约束是编译期（是编译期，不是编译器，没打错）的施加还是不这样做一定会出错
+> Pin只是编译期的约束，是为了防止出错，详细介绍看本文上部分 `Pin的作用是防止move，但如果程序员小心处理，那就不会出错。为什么还需要Pin呢？xxxx`。
+
+> 解释，由于 field 被Pin与否都不会影响逻辑，所以其他需要被Pin的都实现了Unpin，那整个结构从原则上就是 Unpin，但编译器只会对全部字段都是Unpin的 Struct才会自动实现Unpin，所以这种情况下需要开发者手动声明 Struct 为 Unpin
+
+#### Pinning is structural for `field`
+
+另一个选择是决定 pinning对字段是结构化的，这意味着，如果struct被pinned，field也会。
+
+通过这可以编写映射创建 `Pin<&mut Field>`，如下所示，field是pinned
+
+```rs
+impl Struct {
+    fn pin_get_field(self: Pin<&mut Self>) -> Pin<&mut Field> {
+        // This is okay because `field` is pinned where `self` is.
+        unsafe { self.map_unchecked_mut(|s| &mut s.field) }
+    }
+}
+```
+
+然而，为了结构化pinning，需要满足几个条件：
+
+1. 如果全部结构化field都是Unpin，那struct这容器才会是Unpin。这其实是编译器默认的行为，但Unpin是safe trait，所以编写 struct 的作者需确保不添加 `impl <T> Unpin for Struct<T>`（值得注意的是，像上面 `pin_get_field`添加将`Pin<&mut Self>` 映射为 `Pin<&mut Field>`需要unsafe代码块，但实现Unpin本身是safe的，如果你通过unsafe完成上述映射，就必须仔细考虑Unpin的添加与否。）
+
+> 为什么要特别强调Unpin？
+> Unpin会逃脱 Pin 的限制，从而获取 `&mut Field`，将 `Pin<&mut Self>`转换成 `Pin<&mut Field>`的过程中蕴含着一层假设，即Self不会被move。但对Struct实现Unpin后会使得Self 成为Unpin，Unpin可以逃离Pin的限制，这很危险（只是危险，不一定会出错，如果你足够牛逼，仔细处理各种边界case也没问题，只不过没有编译器约束你罢了）
+
+
+2. struct的析构函数不能将结构化pin的字段move出去。这是[上一节](https://doc.rust-lang.org/nightly/core/pin/index.html#drop-implementation)着重陈述的一点： `drop` 接受 `&mut self`参数，但 struct和他内部的字段可能刚才被Pin住了。你必须保证 Drop 实现中不会move内部字段。尤其上面介绍的，这意味着你的struct一定不能是`#[repr(packed)]`。浏览[上一节](https://doc.rust-lang.org/nightly/core/pin/index.html#drop-implementation) 学习如何编写 drop，让编译器帮助你别意外违反 pinning.
+
+
+3. 你必须确保遵守 [drop 保证*（drop guarantee）](https://doc.rust-lang.org/nightly/core/pin/index.html#drop-guarantee)。一旦你struct被pinned，在没调用struct析构函数之前，struct的那片内存必须不被覆盖，不会释放（否则就是UB，这比较好理解）。这可能会很难办，正如 `VecDeque<T>`遇到的那样： 如果容器内的元素的析构函数panic，那 `VecDeque<T>` 的析构函数调用就会失败。这违反了 `drop` 保证（drop guarantee），因为这会导致容器内元素明明析构函数未被调用，但他们的内存却被释放（deallocated）。所幸`VecDeque<T>`并没有 pinning 映射（projections），所以上述情况不会导致 `unsoundness`
+
+4. 你一定不能在struct被pinned期间，提供任何可能导致 structural field 被move出去的方法。例如，如果 struct 包含 `Option<T>`，恰好有个take方法，其函数形参为 `fn(Pin<&mut Self>) -> Pin<&mut T>`，这 take 方法可被用来将 T 从 pinned 的 `Struct<T>` move出去
+
+- 这意味着 pinning 不能用于 结构化pin住 持有数据的这个字段
+> 上面这句话有些生硬。换成英文感受下
+> 
+> which means pinning cannot be structural for the field holding this data.
+> 意思是，Struct 的字段明明被 pinning 了，结果你提供方法将 `Pin<&mut Struct<T>>` 转换为 `Option<T>`，使得 T 逃脱了 Pin 的约束，这显然是**错误**的
+
+再举一个更复杂的，将数据从已经被 pinned 的结构 move 出去的例子。想象下如果 `RefCell<T>`有个 `fn get_pin_mut(self: Pin<&mut Self>) -> Pin<&mut T>`方法，那我们可以这么玩
+
+```rs
+fn exploit_ref_cell<T>(rc: Pin<&mut RefCell<T>>) {
+    { let p = rc.as_mut().get_pin_mut(); } // 将 Pin<&mut RefCell<T>> 转换为 Pin<&mut T>
+    let rc_shr: &RefCell<T> = rc.into_ref().get_ref(); // Pin<&mut T> => &RefCell<T>
+    let b = rc_shr.borrow_mut(); // RefCell本身有 borrow_mut() 方法，可以通过 &self 获得 &mut self。
+    // https://doc.rust-lang.org/std/cell/struct.RefCell.html#method.borrow_mut
+    // RefCell借助UnsafeCell，将 &self 转为 &mut self
+    let content = &mut *b; // reborrow下，最终获取 &mut T
+    // 通过上述 "努力" ，将 Pin<&mut Ref<T>> 一步步转化成 &mut T，逃脱了Pin的限制
+    // 获得 &mut T后，就能将 T 从 Pin<&mut RefCell<T>> move出去
+}
+```
+
+**翻译完上面之后，总结一句话**
+
+> Pin作为rust zero cost的其中一例，只是编译期的约束。而如果你足够牛逼，仔细处理各种边界case，哪怕Pin住，通过unsafe随便玩，随便move都没问题。但为了绝对正确性，我们认为在 `Pin<T>` 期间利用各种手段将 T move 出去，是**绝对错误**的
+
+----------------------------
+
+重点看下面这连接，最后两个作为补充即可
+
+> https://stackoverflow.com/questions/56058494/when-is-it-safe-to-move-a-member-value-out-of-a-pinned-future
+
+
+https://github.com/rust-lang/futures-rs/blob/0.3.0-alpha.15/futures-util/src/future/map.rs#L36-L45
+
+https://doc.rust-lang.org/nightly/core/pin/index.html#projections-and-structural-pinning
