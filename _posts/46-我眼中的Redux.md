@@ -1,10 +1,10 @@
 ---
+tags:
+- 前端
 title: 我眼中的Redux
 date: 2020-08-24
 updated: 2020-08-24
 issueid: 46
-tags:
-- 前端
 ---
 现代大型React应用必须要用一个中央数据存储便于不同组件之间共享数据
 

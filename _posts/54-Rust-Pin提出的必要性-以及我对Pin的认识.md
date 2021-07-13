@@ -1,10 +1,10 @@
 ---
+date: 2021-06-08
+updated: 2021-07-13
+issueid: 54
 tags:
 - Rust
 title: Rust-Pin提出的必要性-以及我对Pin的认识
-date: 2021-06-08
-updated: 2021-07-12
-issueid: 54
 ---
 ## 我对Pin 的整体理解 - 为了解决unsafe场景下move问题
 
@@ -480,7 +480,7 @@ impl Struct {
 
 4. 你一定不能在struct被pinned期间，提供任何可能导致 structural field 被move出去的方法。例如，如果 struct 包含 `Option<T>`，恰好有个take方法，其函数形参为 `fn(Pin<&mut Self>) -> Pin<&mut T>`，这 take 方法可被用来将 T 从 pinned 的 `Struct<T>` move出去
 
-- 这意味着 pinning 不能用于 结构化pin住 持有数据的这个字段
+这意味着 pinning 不能用于 结构化pin住 持有数据的这个字段
 > 上面这句话有些生硬。换成英文感受下
 > 
 > which means pinning cannot be structural for the field holding this data.

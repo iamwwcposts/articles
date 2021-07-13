@@ -1,9 +1,9 @@
 ---
+updated: 2019-10-31
 issueid: 10
 tags:
 title: 如何优雅地使用Git合并多个commits？
 date: 2019-09-13
-updated: 2019-10-31
 ---
 你可能有过下面的经历
 

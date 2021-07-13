@@ -1,9 +1,9 @@
 ---
-updated: 2020-04-26
-issueid: 42
 tags:
 title: 一个简单的React模板以及一些React运作流程的简短分析
 date: 2020-04-25
+updated: 2020-04-26
+issueid: 42
 ---
 我知道你看不懂的 😂
 <!--more-->

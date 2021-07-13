@@ -1,9 +1,9 @@
 ---
+issueid: 4
 tags:
 title: Vue VNode Patch 分析
 date: 2019-09-11
 updated: 2019-09-11
-issueid: 4
 ---
 这里记录一下Vue的 Virtual DOM 比较过程
 来自于 `cn.vuejs.org` `patchVnode` 函数断点

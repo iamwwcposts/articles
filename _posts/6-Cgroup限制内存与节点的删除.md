@@ -1,9 +1,9 @@
 ---
-tags:
-title: Cgroup限制内存与节点的删除
 date: 2019-09-11
 updated: 2019-09-11
 issueid: 6
+tags:
+title: Cgroup限制内存与节点的删除
 ---
 首先不限制内存，让我们常见一个进程
 

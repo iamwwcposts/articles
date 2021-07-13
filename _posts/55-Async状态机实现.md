@@ -1,10 +1,10 @@
 ---
+title: Async状态机实现
+date: 2021-06-18
 updated: 2021-06-18
 issueid: 55
 tags:
 - Rust
-title: Async状态机实现
-date: 2021-06-18
 ---
 ## Rust中的状态机实现
 
