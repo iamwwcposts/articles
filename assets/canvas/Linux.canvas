@@ -1,0 +1,15 @@
+{
+	"nodes":[
+		{"id":"af74362181736e04","x":-560,"y":-4400,"width":250,"height":60,"type":"text","text":"Linux"},
+		{"id":"7e293a6eb688b347","x":-560,"y":-4160,"width":250,"height":60,"type":"text","text":"NET"},
+		{"id":"725e4c9d7de3e296","x":-1120,"y":-3960,"width":444,"height":400,"type":"file","file":"计算机/Linux/源码分析/发包callstack分析.md"},
+		{"id":"0034e0aff52a1eed","x":-635,"y":-3960,"width":400,"height":400,"type":"file","file":"计算机/Linux/源码分析/kernel-net.md"},
+		{"id":"01dbd600e90ae92f","x":-200,"y":-3960,"width":400,"height":400,"type":"file","file":"计算机/Linux/源码分析/e1000收包callstack分析.md"}
+	],
+	"edges":[
+		{"id":"f40bf9fc86da7027","fromNode":"af74362181736e04","fromSide":"bottom","toNode":"7e293a6eb688b347","toSide":"top"},
+		{"id":"a38c74d4daf79e89","fromNode":"7e293a6eb688b347","fromSide":"bottom","toNode":"725e4c9d7de3e296","toSide":"top"},
+		{"id":"5b00b5ee52ec64f7","fromNode":"7e293a6eb688b347","fromSide":"bottom","toNode":"0034e0aff52a1eed","toSide":"top"},
+		{"id":"020a39ab0026cb22","fromNode":"7e293a6eb688b347","fromSide":"bottom","toNode":"01dbd600e90ae92f","toSide":"top"}
+	]
+}

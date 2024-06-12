@@ -1,0 +1,19 @@
+# This is a basic workflow to help you get started with Actions
+
+name: Trigger Netlify
+
+# Controls when the workflow will run
+on:
+  issues:
+    types: [opened,edited,deleted,transferred,pinned,unpinned,closed,reopened,assigned,unassigned,labeled,unlabeled,locked,unlocked,milestoned,demilestoned]
+
+jobs:
+  start:
+    name: trigger webhook
+    if: ${{ !github.event.issue.pull_request }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -X POST -d {} https://api.netlify.com/build_hooks/5db8f7db6051f5b810798d74 -vvv
+        env:
+          NUMBER: ${{ github.event.issue.number }}
